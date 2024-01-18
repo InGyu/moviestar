@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <!-- 다양한 언어를 사용할 수 있도록 UTF-8 을 사용하도록 합니다. -->
+        <meta charset="UTF-8"/>
+
+        <!-- 반응형으로 동작하게 합니다. -->
+        <meta title="viewport" content="width=device-width, initial-scale=1.0"/>
+
+        <!-- Bootstrap 을 포함합니다. -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://getbootstrap.com/docs/5.3/assets/css/docs.css" rel="stylesheet">
+
+        <!-- jQuery 를 포함합니다. -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+        <!-- CSS library 인 Bulma 를 포함합니다. -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css"/>
+
+        <!-- 텍스트형태로 되어있는 icon 을 쓸 수 있도록 Font awesome 을 포함하빈다. -->
+        <script src="https://kit.fontawesome.com/0f470a561d.js" crossorigin="anonymous"></script>
+
+        <title>마이 페이보릿 무비 | 프론트-백엔드 연결 마지막 예제!</title>
+
+        <!-- 이 HTML 안에서 사용할 CSS 를 정의합니다. -->
+        <!-- . 으로 시작하는 단어는 CSS clas 에 해당하며 . 을 제외한 이름을 HTML tag 에서 class="..." 형태로 사용합니다. -->
+        <!-- 예: <div class="center"> -->
+        <style>
+            .center {
+                text-align: center;
+            }
+
+            .sorter-box {
+                width: 550px;
+            }
+
+            .movie-list {
+                width: 550px;
+                margin: 20px auto 0 auto;
+            }
+
+            .movie-title {
+                display: inline-block;
+                font-size : 130%;
+                font-weight : bold;
+            }
+
+            .movie-title:hover {
+                text-decoration: underline;
+            }
+
+            .card{
+                margin-bottom: 15px;
+                padding : 12px;
+                
+            }
+            
+            .icon{
+                margin-left : 7px;
+            }
+            .movie-poster{
+                width : 100px;
+                margin : 30px;
+            }
+            .card-body {
+                padding : 30px;
+            }
+            #trash{
+                text-align :right;
+            }
+            #col1 {
+                text-align : center;
+                padding : 10px 0;
+                border-top: 2px solid #E2E2E2;
+                
+            }
+            #col2 {
+                text-align : center;
+                padding : 10px 0;
+                border-top: 2px solid #E2E2E2;
+                
+            }
+            .updown {
+                border: 1px solid black;
+                width: 0.1px;
+                height: 10px;
+            }
+            
+        </style>
+
+        <!-- 이 HTML 에서 사용할 JavaScript 를 작성합니다. -->
+        <script>
+            const Sort = {
+                BY_LIKES: "likes",
+                BY_VIEWERS: "viewers",
+                BY_DATE: "date",
+            };
+
+            let sortMode = Sort.BY_LIKES
+            let trashMode = false
+
+            // index.html 의 로드가 완료되면 ready(...) 안에 등록된 함수가 자동으로 호출됩니다.
+            // 아래는 함수에 이름을 부여하지 않고 바로 ready(...) 의 매개변수로 함수를 전달하는 방식으로 로드 완료시 호출될 함수를 등록합니다.
+            $(document).ready(function () {
+                // 영화 목록을 보여줍니다.
+                showMovie()
+
+                // 현재 적용되고 있는 정렬 방식의 버튼에 눌려져 보이는 효과를 줍니다.
+                displaySorter()
+
+                // 휴지통 모드에 따라 메뉴를 다르게 바꿔줍니다.
+                displayTrashMode()
+            });
+
+            function showMovie() {
+                // 1. id="movie-box" 로 된 태그의 내부 html 태그를 모두 삭제합니다.
+                $('#movie-box').empty()
+
+                // 2. 휴지통을 보고 있는지 여부에 따라 호출할 API 를 선택합니다.
+                //    휴지통이 아닐 경우 GET /api/list
+                //    휴지통일 경우 GET /api/list/trash
+                if (trashMode == false) {
+                    $.ajax({
+                        type: "GET",
+                        url: "/api/list",
+                        data: {'sortMode': sortMode},
+                        success: function(response) {
+                            if (response['result'] != 'success') {
+                                alert(sortMode + ' 순으로 영화 목록 받아오기 실패!')
+                                return
+                            }
+                            // 3. 서버가 돌려준 stars_list를 movies 라는 변수에 저장합니다.
+                            let movies = response['movies_list']
+                            // 4. 영화 카드를 추가합니다. 이 때 휴지통 여부에 따라 카드 모양이 달라지므로 휴지통 여부(=false)도 같이 전달합니다.
+                            addMovieCards(movies, false)
+                        }
+                    })
+                } 
+                else if (trashMode == true) {
+                    $.ajax({
+                        type: "GET",
+                        url: "/api/list/trash",
+                        data: {'sortMode': sortMode},
+                        success: function(response) {
+                            if (response['result'] != 'success') {
+                                alert('휴지통 목록 불러오기 실패')
+                                return
+                            }
+                            // 3. 서버가 돌려준 stars_list를 movies 라는 변수에 저장합니다.
+                            let movies = response['movies_list']
+                            // 4. 영화 카드를 추가합니다. 이 때 휴지통 여부에 따라 카드 모양이 달라지므로 휴지통 여부(=false)도 같이 전달합니다.
+                            addMovieCards(movies, true)
+                        }
+                    })
+                }
+            }
+
+            function addMovieCards(movies) {
+                // for 문을 활용하여 movies 배열의 요소를 차례대로 조회합니다.
+                for (let i = 0; i < movies.length; i++) {
+                    let movie = movies[i]
+
+                    // 1. movie[i] 요소의 title,viewers, likes 키 값을 활용하여 값을 조회합니다.
+                    let id = movie['_id']
+                    let title = movie['title']
+                    let viewers = movie['viewers']
+                    let likes = movie['likes']
+                    let poster_url = movie['poster_url']
+                    let open_date = '';
+                    console.log(movie['open_year'])
+                    if (movie['open_year'] != null) {
+                        open_date += '개봉일 ' + movie['open_year'];
+
+                        if (movie['open_month'] != null) {
+                            open_date +=  '.' + movie['open_month'];
+                            if (movie['open_day'] != null) {
+                                open_date += '.' + movie['open_day'];
+                                
+                            }
+                        }
+                        $('.movie-date').show();
+                    }
+                    
+                    else if (movie['open_year'] == null) {
+                        $('.movie-date').hide();
+                    }
+                    $('.movie-date').show();
+                    
+                    viewers = parseInt(viewers).toLocaleString() // 3자리 콤마
+                    // 2. 영화 카드를 만듭니다.
+                    let cardContentHtml = `
+                        <div class = "col-md-3">
+                            <img src="${poster_url}" class="card-img-top movie-poster"/>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="card-body">
+                                <p class="movie-title">${title}</p>
+                                <br>
+                                <p class="icon"><i class="fas fa-thumbs-up"></i>${likes}</p>
+                                <p class="movie-viewers">누적관객수 ${viewers}명</p>
+                                <p class="movie-date">${open_date}</p>
+                            </div>
+                        </div>
+                    `
+
+                    // 3. 휴지통을 보고 있는지 여부에 따라 카드의 버튼을 다르게 설정해줍니다.
+                    let cardFooterHtml = ''
+                    if (trashMode == false) {
+                        cardFooterHtml = `
+                        <div class = "col" id = 'col1'>
+                            <a href="#" onclick="likeMovie('${title}')">
+                            위로!
+                            <i class="fas fa-thumbs-up"></i>
+                            </a>
+                        </div>
+                        <div class="vr p-0"></div>
+                        <div class = "col" id = 'col2'>
+                            <a href="#" onclick="trashMovie('${title}')" class ="has-text-danger">
+                            휴지통으로
+                            <i class="fa-solid fa-trash"></i>
+                            </a>
+                        </div>
+                        `
+                    } else {
+                        cardFooterHtml = `
+                            <div class = "col" id = 'col1'>
+                                <a href="#" onclick="restoreMovie('${title}')">
+                                복구하기
+                                </a>
+                            </div>
+                            <div class="vr p-0"></div>
+                            <div class = "col" id = 'col2'>
+                                <a href="#" onclick="deleteMovie('${title}')" class ="has-text-danger">
+                                영구삭제
+                                <i class="fa-solid fa-trash"></i>
+                                </a>
+                            </div>
+                        `
+                    }
+
+                    // 4. #movie-box에 생성된 HTML 을 붙입니다.
+                    $('#movie-box').append(`
+                        <div class="card mb-3 p-0">
+                            <div class = "row p-0 m-0">
+                            ${cardContentHtml}
+                            </div>
+                            <div class = "row p-0 m-0">
+                            ${cardFooterHtml}
+                            </div>
+                            
+                        </div>
+                    `)
+                }
+            }
+
+            ///////////////////////////////////////////////////////////////////////////////
+            // 주의: 아래 like movie 는 임의의 영화에 좋아요가 표시됩니다.
+            // 이 구현을 선택한 무비에 좋아요를 넣는 것으로 수정하셔야 됩니다. (함수 매개변수 및 함수 구현 모두)
+            function likeMovie(title) {
+                console.log(title)
+                $.ajax({
+                    type: "POST",
+                    url: "/api/like",
+                    data: {post_title : title},
+                    
+                    success: function (response) {
+                        if (response['result'] == 'success') {
+                            // 2. '좋아요 완료!' 얼럿을 띄웁니다.
+                            alert('좋아요 완료!')
+                            // 3. 변경된 정보를 반영하기 위해 새로고침합니다.
+                            showMovie(false)                            
+                        } else {
+                            alert('좋아요 실패ㅠㅠ')
+                        }
+                        
+                    }
+                });
+            }
+
+            function trashMovie(title) {
+                $.ajax({
+                    type: 'POST',
+                    url: '/api/update/trash',
+                    data: {post_title : title},
+                    success: function (response) {
+                        if (response['result'] == 'success') {
+                            alert('휴지통으로 보내짐')
+                            showMovie(false)
+                        }
+                        else
+                            alert('휴지통 오류')
+                    }
+                })
+            }
+
+            function restoreMovie(title) {
+                $.ajax({
+                    type: 'POST',
+                    url: '/api/update/restore',
+                    data: {post_title : title},
+                    success: function (response) {
+                        if (response['result'] == 'success') {
+                            alert(title + ' 복구 됨')
+                            showMovie(false)
+                        }
+                        else
+                            alert('복구 오류')
+                    }
+                })
+            }
+
+            function deleteMovie(title) {
+                $.ajax({
+                    type: 'POST',
+                    url: '/api/update/delete',
+                    data: {post_title : title},
+                    success: function (response) {
+                        if (response['result'] == 'success') {
+                            alert(title + ' 삭제 됨')
+                            showMovie(false)
+                        }
+                        else
+                            alert('삭제 오류')
+                    }
+                })
+            }
+
+            // 정렬 기준 버튼을 클릭하면 호출됨
+            function changeSorter(newMode) {
+                if (sortMode == newMode) {
+                    return
+                }
+                sortMode = newMode
+                
+                console.log(sortMode)
+                displaySorter()
+                showMovie()
+            }
+
+            // 정렬 기준에 따라 해당 버튼만 활성화 시키고 다른 버튼은 비활성화 시킴
+            function displaySorter() {
+                document.getElementById("sorter-likes").classList.remove("active")
+                document.getElementById("sorter-viewers").classList.remove("active")
+                document.getElementById("sorter-date").classList.remove("active")
+            }
+
+            let flag = 0
+            function displayTrashMode() {
+                if(flag == 1)
+                {
+                    trashMode = true
+                    showMovie(trashMode)
+                    $('.watch-trash').html('<i class="fa-solid fa-trash"></i>휴지통 나가기')
+                    flag = 0
+                    
+                }
+                else if (flag == 0){
+                    trashMode = false
+                    showMovie(trashMode)
+                    $('.watch-trash').html('<i class="fa-solid fa-trash"></i>휴지통 보기')
+                    flag = 1
+                }
+                // trashMode 에 따라 "휴지통 보기" 또는 "휴지통 나가기" 가 출력 되게 구현해야 됩니다.
+            }
+
+        </script>
+    </head>
+
+    <!-- HTML 본문에 해당합니다. -->
+    <!-- HTML 태그를 이용해서 layout 을 대략적으로 잡아두고, -->
+    <!-- 위에 정의된 JavaScript 를 통해 동적으로 데이터를 조작해 최종 HTML 이 만들어집니다. -->
+    <body>
+        <!-- 제목 부분 -->
+        <section class="hero is-warning">
+            <div class="hero-body">
+                <div class="container center">
+                    <h1 class="title">
+                        마이 페이보릿 무비😆
+                    </h1>
+                    <h2 class="subtitle">
+                        순위를 매겨봅시다
+                    </h2>
+                </div>
+            </div>
+        </section>
+
+        <!-- 정렬 옵션 부분 -->
+        <!-- *주의* 아래 내용 중 id="sorter-likes", id="sorter-viewers", id="sorter-date" 은 삭제하면 안됩니다. -->
+        <div class="mx-auto sorter-box">
+            
+            <div class="btn-group m-3 mx-auto w-100">
+                <a href="#" class="btn btn-primary" id="sorter-likes" onclick="changeSorter('likes')">좋아요 순으로 정렬</a>
+                <a href="#" class="btn btn-primary" id="sorter-viewers" onclick="changeSorter('viewers')">누적관객수 순으로 정렬</a>
+                <a href="#" class="btn btn-primary" id="sorter-date" onclick="changeSorter('date')">개봉일 순으로 정렬</a>
+            </div>
+            
+            
+        </div>
+
+        <!-- "휴지통 보기" 부분 -->
+        <div class="mx-auto sorter-box" id = 'trash'>
+            <a href="#" onclick="displayTrashMode()" class="watch-trash has-text-primary"></a>
+        </div>
+        <br>
+        <!-- *주의* 아래 내용 중 id="trash-mode-box" 은 삭제하면 안됩니다. -->
+        <div class="mx-auto sorter-box">
+            <span class="d-flex justify-content-end">
+                <div id="trash-mode-box">
+                    <!-- javascript 가 이 사이에 trash mode 에 따라 HTML element 를 생성해서 삽입합니다. -->
+                </div>
+            </span>
+        </div>
+
+        <!-- 동적으로 영화 목록이 들어갈 부분 -->
+        <!-- *주의* 아래 내용 중 id="movie-box" 은 삭제하면 안됩니다. -->
+        
+        <div class="movie-list" id="movie-box">
+            <!-- javascript 가 이 사이에 HTML element 를 생성해서 삽입합니다. -->
+        </div>
+    </body>
+</html>
