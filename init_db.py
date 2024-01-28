@@ -21,17 +21,19 @@ def insert_all():
 
 
     movies = soup.select('#morColl > div.coll_cont > div > ol > li')
-    #print(len(movies))
+
     for movie in movies :
         movie_info = movie.select_one('div.wrap_cont')
+        
         movie_thumb = movie.select_one('div.wrap_thumb > a > img.thumb_img')['data-original-src']
+        print(movie_thumb)
         if not movie_info :
             continue
         #print(movie_info)
         movie_info = movie_info.text.split("   ")
         temp=[] #임시로 사용하기 위한 리스트
         del movie_info[0]
-        print(movie_info)
+        
         for i in movie_info :
             i = i.strip()
             temp.append(i)
@@ -44,24 +46,18 @@ def insert_all():
         movie_info[0] = temp[0] #제목원본 보존
         print(movie_thumb)
         open_year, open_month, open_day = None, None, None
-        #print(movie_info[0] , end='')
         for date in movie_info :
-            #print(type(date))
             if re.match(r'\d{4}\.\d{2}', date) :
-                #print(date+' date')
                 if date.count('.') == 3:
                     date_elements = date.split('.')
                     (open_year, open_month, open_day) = int(date_elements[0]), int(date_elements[1]), int(date_elements[2])
-                #    print(open_year, open_month, open_day)
                     
                 else :
                     (open_year, open_month) = date.split('.')
                     (open_year, open_month) = int(date_elements[0]), int(date_elements[1])
-                #   print(open_year, open_month)
             
-        viewers = 0
+        viewers = None
         for person in movie_info:
-            #print(person)
             if person.isdigit():
                 person = person.replace(',', '').strip()
                 person = int(person)
